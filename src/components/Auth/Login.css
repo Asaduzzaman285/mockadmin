@@ -1,0 +1,42 @@
+.login-container {
+    height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    background: url('/assets/loginpagebg.jpg') no-repeat center center/cover; 
+  }
+  
+  .login-form {
+    width: 100%;
+    max-width: 400px;
+    padding: 20px;
+    background: rgba(0, 0, 0, 0.7); /* Semi-transparent dark background */
+    border-radius: 10px;
+    box-shadow: 0 0 10px rgba(255, 255, 255, 0.3);
+    color: white;
+  }
+  
+  .login-form h2 {
+    text-align: center;
+    color: #fff;
+  }
+  
+  .login-form input {
+    background: rgba(255, 255, 255, 0.1);
+    border: none;
+    color: #fff;
+  }
+  
+  .login-form input::placeholder {
+    color: rgba(255, 255, 255, 0.7);
+  }
+  
+  .login-form .btn {
+    background: #8dc63f; /* Match button color */
+    border: none;
+  }
+  
+  .login-form .btn:hover {
+    background: #7cb331;
+  }
+  
