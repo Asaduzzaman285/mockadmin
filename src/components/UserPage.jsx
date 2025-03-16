@@ -638,7 +638,7 @@ const UserPage = ({ sidebarVisible }) => {
   
         {/* Updated pagination styling */}
         {!isFiltered && !tableLoading && filteredUsers.length > 0 && (
-          <div className="mt-4 d-flex justify-content-center">
+          <div className="mt-4 d-flex justify-content-end">
             <Paginate
               paginator={paginator}
               currentPage={currentPage}

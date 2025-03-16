@@ -1052,7 +1052,7 @@ const handleQuestionFileUpload = async () => {
     
           {/* Pagination */}
           {!tableLoading && paginator?.total_pages > 1 && (
-            <div className="mt-4 d-flex justify-content-center">
+            <div className="mt-4 d-flex justify-content-end">
               <Paginate
                 paginator={paginator}
                 currentPage={currentPage}
