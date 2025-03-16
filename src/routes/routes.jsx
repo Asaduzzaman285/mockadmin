@@ -14,15 +14,15 @@ import MockTest from '../components/MockTest';
 const routes = [
   { path: '/admin/home', exact: true, name: 'Homepage', component: (props) => <Homepage {...props} /> },
   { path: '/admin/user', exact: true, name: 'Userpage', component: (props) => <UserPage {...props} /> },
-  { path: '/admin/members', exact: true, name: 'Memberpage', component: (props) => <Memberpage {...props} /> },
-  { path: '/admin/events', exact: true, name: 'Eventpage', component: (props) => <Eventpage {...props} /> },
-  { path: '/admin/products', exact: true, name: 'Contentpage', component: (props) => <Contentpage {...props} /> },
-  { path: '/admin/success_stories', exact: true, name: 'SuccessStories', component: (props) => <SuccessStories {...props} /> },
-  { path: 'admin/sliders', exact: true, name: 'Sliders', component: (props) => <Sliders {...props} /> },
-  { path: 'admin/ads', exact: true, name: 'Ads', component: (props) => <Ads {...props} /> },
-  { path: 'admin/orders', exact: true, name: 'Orders', component: (props) => <Orders {...props} /> },
+  // { path: '/admin/members', exact: true, name: 'Memberpage', component: (props) => <Memberpage {...props} /> },
+  // { path: '/admin/events', exact: true, name: 'Eventpage', component: (props) => <Eventpage {...props} /> },
+  // { path: '/admin/products', exact: true, name: 'Contentpage', component: (props) => <Contentpage {...props} /> },
+  // { path: '/admin/success_stories', exact: true, name: 'SuccessStories', component: (props) => <SuccessStories {...props} /> },
+  // { path: 'admin/sliders', exact: true, name: 'Sliders', component: (props) => <Sliders {...props} /> },
+  // { path: 'admin/ads', exact: true, name: 'Ads', component: (props) => <Ads {...props} /> },
+  // { path: 'admin/orders', exact: true, name: 'Orders', component: (props) => <Orders {...props} /> },
   { path: 'admin/tests', exact: true, name: 'Tests', component: (props) => <Tests {...props} /> },
-  { path: 'admin/mocktest', exact: true, name: 'MockTest', component: (props) => <MockTest {...props} /> },
+
   
   
 ];

@@ -37,7 +37,7 @@ const Tests = ({ sidebarVisible }) => {
   const [allTests, setAllTests] = useState([]);
   const [uploadSuccess, setUploadSuccess] = useState(false);
   const [uploadError, setUploadError] = useState('');
-  
+  const [filterOptions, setFilterOptions] = useState([]);
   // New state variables from the updated version
   const [testQuestions, setTestQuestions] = useState([]);
   const [isLoadingQuestions, setIsLoadingQuestions] = useState(false);
@@ -53,24 +53,26 @@ const Tests = ({ sidebarVisible }) => {
   useEffect(() => {
     checkAuth();
   }, []);
-
+  useEffect(() => {
+    fetchFilterData();
+  }, []);
   useEffect(() => {
     if (!authError) {
       fetchTests();
     }
-  }, [currentPage, authError]);
+  }, [currentPage, authError]); 
 
-  useEffect(() => {
-    if (tests.length > 0) {
-      filterTests();
-    }
-  }, [selectedTest, tests]);
+  // useEffect(() => {
+  //   if (tests.length > 0) {
+  //     filterTests();
+  //   }
+  // }, [selectedTest, tests]);
 
-  const filterTests = () => {
+  const filterTests = async () => {
     if (selectedTest) {
-      setFilteredTests(tests.filter(test => test.id === selectedTest.value));
+      await fetchTests(selectedTest.value);
     } else {
-      setFilteredTests(tests);
+      await fetchTests();
     }
   };
 
@@ -84,29 +86,78 @@ const Tests = ({ sidebarVisible }) => {
     }
     return true;
   };
+  const fetchFilterData = async () => {
+    if (!checkAuth()) return;
+    
+    const token = localStorage.getItem("authToken");
+    try {
+      const response = await axios.get(
+        `${API_BASE_URL}/api/v1/mock-test/filter-data`,
+        {
+          headers: { Authorization: `Bearer ${token}` }
+        }
+      );
+      
+      if (response.data.status === "success") {
+        setFilterOptions(response.data.data.title_list);
+      }
+    } catch (error) {
+      console.error("Error fetching filter data:", error);
+      if (error.response?.status === 401 || error.response?.status === 403) {
+        setAuthError(true);
+      }
+    }
+  };
+  
+  // Add this function to fetch single test data
+  const fetchSingleTestData = async (testId) => {
+    if (!checkAuth() || !testId) return;
+    
+    const token = localStorage.getItem("authToken");
+    try {
+      const response = await axios.get(
+        `${API_BASE_URL}/api/v1/mock-test/single-data/${testId}`,
+        {
+          headers: { Authorization: `Bearer ${token}` }
+        }
+      );
+      
+      if (response.data.status === "success") {
+        // Update your tests data accordingly
+        setFilteredTests([response.data.data]);
+      }
+    } catch (error) {
+      console.error("Error fetching single test:", error);
+      if (error.response?.status === 401 || error.response?.status === 403) {
+        setAuthError(true);
+      }
+    }
+  };
+  
 
-  const fetchTests = async () => {
+
+
+  const fetchTests = async (mockTestId = null) => {
     if (!checkAuth()) return;
     
     setTableLoading(true);
     const token = localStorage.getItem("authToken");
     
     try {
-      const response = await axios.get(
-        `${API_BASE_URL}/api/v1/mock-test/list-paginate?page=${currentPage}&per_page=${testsPerPage}`,
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
+      const url = mockTestId 
+        ? `${API_BASE_URL}/api/v1/mock-test/list-paginate?mock_test_id=${mockTestId}&page=${currentPage}&per_page=${testsPerPage}`
+        : `${API_BASE_URL}/api/v1/mock-test/list-paginate?page=${currentPage}&per_page=${testsPerPage}`;
+  
+      const response = await axios.get(url, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+  
       const result = response.data;
       if (result.status === "success") {
         setTests(result.data.data);
         setFilteredTests(result.data.data);
         setPaginator(result.data.paginator);
         setAuthError(false);
-        
-        // Get all tests for the select options
-        if (allTests.length === 0) {
-          fetchAllTests();
-        }
       }
     } catch (error) {
       console.error("Error fetching tests:", error);
@@ -250,18 +301,9 @@ const Tests = ({ sidebarVisible }) => {
       );
       
       if (response.data.status === "success") {
-        // Fix the path that already contains incorrect structure
-        let returnedPath = response.data.data.file_path;
-        
-        // Remove any leading slashes
-        if (returnedPath.startsWith('/')) {
-          returnedPath = returnedPath.substring(1);
-        }
-        
-        // Create the final path with the API base URL
-        const uploadedPath = `${API_BASE_URL}/${returnedPath}`;
-        
-        setModalData(prev => ({ ...prev, file_path: uploadedPath }));
+        // Store only the path without API_BASE_URL
+        const returnedPath = response.data.data.file_path;
+        setModalData(prev => ({ ...prev, file_path: returnedPath }));
       }
     } catch (error) {
       console.error("Error uploading file:", error);
@@ -273,43 +315,117 @@ const Tests = ({ sidebarVisible }) => {
     }
   };
 
-  // Updated from the newer version
-  const handleQuestionFileUpload = async () => {
-    if (!checkAuth() || !questionFile || !selectedTestId) return;
+// In the render part where you display the image
+<Form.Group className="mb-3">
+  <Form.Label className="fw-medium small text-secondary">Image</Form.Label>
+  {modalData.file_path && (
+    <div className="mb-2">
+      <img
+        src={`${API_BASE_URL}${modalData.file_path}`}
+        alt="Test"
+        className="img-fluid rounded"
+      />
+    </div>
+  )}
+  <Form.Control
+    type="file"
+    accept="image/*"
+    size="sm"
+    onChange={(e) => handleFileUpload(e.target.files[0])}
+  />
+</Form.Group>
+
+const handleQuestionFileUpload = async () => {
+  if (!checkAuth() || !questionFile || !selectedTestId) return;
+  
+  // Reset states before new upload
+  setUploadError('');
+  setUploadSuccess(false);
+  
+  const allowedTypes = [
+    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    'application/vnd.ms-excel',
+    'application/octet-stream'
+  ];
+  
+  if (!allowedTypes.includes(questionFile.type)) {
+    setUploadError('Please upload a valid Excel file (.xlsx or .xls)');
+    return;
+  }
+
+  if (!questionFile.name.match(/\.(xlsx|xls)$/i)) {
+    setUploadError('File must be an Excel file (.xlsx or .xls)');
+    return;
+  }
+
+  if (questionFile.size > 5 * 1024 * 1024) {
+    setUploadError('File size should be less than 5MB');
+    return;
+  }
+  
+  const token = localStorage.getItem("authToken");
+  const formData = new FormData();
+  formData.append("question_file", questionFile);
+  formData.append("mock_test_id", selectedTestId);
+  
+  try {
+    setUploadingQuestions(true);
+    
+    const response = await axios.post(
+      `${API_BASE_URL}/api/v1/mock-test/add-questions`,
+      formData,
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "multipart/form-data",
+        },
+        timeout: 30000,
+      }
+    );
+    
+    if (response.data.status === "success") {
+      setUploadSuccess(true);
+      // Clear file input after successful upload
+      if (fileRef.current) {
+        fileRef.current.value = '';
+      }
+      setQuestionFile(null);
+      await fetchSingleTest(selectedTestId);
+    } else {
+      throw new Error(response.data.message || 'Upload failed');
+    }
+  } catch (error) {
+    console.error("Error uploading questions:", error);
+    setUploadError('Failed to upload questions. Please try again.');
+  } finally {
+    setUploadingQuestions(false);
+  }
+};
+
+  // Add individual question delete function
+  const handleDeleteSingleQuestion = async (questionId) => {
+    if (!checkAuth()) return;
     
     const token = localStorage.getItem("authToken");
-    const formData = new FormData();
-    formData.append("question_file", questionFile);
-    formData.append("mock_test_id", selectedTestId);
     
     try {
-      setUploadingQuestions(true);
-      setUploadError('');
-      setUploadSuccess(false);
+      setIsDeletingQuestion(true);
       
-      const response = await axios.post(
-        `${API_BASE_URL}/api/v1/mock-test/add-questions`,
-        formData,
+      const response = await axios.delete(
+        `${API_BASE_URL}/api/v1/mock-test/question/${questionId}`,
         {
-          headers: {
-            Authorization: `Bearer ${token}`,
-            "Content-Type": "multipart/form-data",
-          }
+          headers: { Authorization: `Bearer ${token}` },
+          data: { mock_test_ques_id: questionId }
         }
       );
       
       if (response.data.status === "success") {
-        setUploadSuccess(true);
         await fetchSingleTest(selectedTestId);
       }
     } catch (error) {
-      console.error("Error uploading questions:", error);
-      setUploadError('Failed to upload questions. Please try again.');
-      if (error.response?.status === 401 || error.response?.status === 403) {
-        setAuthError(true);
-      }
+      console.error("Error deleting question:", error);
     } finally {
-      setUploadingQuestions(false);
+      setIsDeletingQuestion(false);
     }
   };
 
@@ -348,10 +464,26 @@ const Tests = ({ sidebarVisible }) => {
     setShowModal(true);
   };
 
-  // Updated from the newer version
   const handleUpdate = async (test) => {
     if (!checkAuth()) return;
+    
+    const correctedFilePath = test.file_path 
+      ? (test.file_path.startsWith('http') 
+          ? test.file_path 
+          : `${API_BASE_URL}${test.file_path.replace('//', '/')}`)
+      : ""; // Set empty string if no file_path
+    
+    setModalData({
+      title: test.title,
+      desc: test.desc,
+      file_path: correctedFilePath,
+      no_of_ques: test.no_of_ques || 0,
+      price: test.price
+    });
+    
     setSelectedTestId(test.id);
+    setEditingTestId(test.id);
+    setIsEditing(true);
     setQuestionFile(null);
     setUploadSuccess(false);
     setUploadError('');
@@ -359,7 +491,6 @@ const Tests = ({ sidebarVisible }) => {
     await fetchSingleTest(test.id);
     setUpdateModalOpen(true);
   };
-
   const handleModalSubmit = async (e) => {
     e.preventDefault();
     if (!checkAuth()) return;
@@ -371,26 +502,35 @@ const Tests = ({ sidebarVisible }) => {
     
     try {
       setIsSaving(true);
-      // Ensure file_path is properly formatted for the API
       let formattedFilePath = modalData.file_path;
-      if (formattedFilePath.startsWith(API_BASE_URL)) {
-        formattedFilePath = formattedFilePath.replace(API_BASE_URL, '');
+      // Remove API_BASE_URL if it exists in the path
+      if (formattedFilePath.includes(API_BASE_URL)) {
+        formattedFilePath = formattedFilePath.split(API_BASE_URL)[1];
       }
       
-      await axios({
+      const response = await axios({
         url: apiEndpoint,
         method: isEditing ? "PUT" : "POST",
-        headers: { Authorization: `Bearer ${token}` },
+        headers: { 
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
         data: {
           ...modalData,
-          id: isEditing ? editingTestId : undefined,
           file_path: formattedFilePath,
           no_of_ques: parseInt(modalData.no_of_ques),
-          price: parseFloat(modalData.price)
+          price: parseFloat(modalData.price),
+          id: editingTestId
         }
       });
-      fetchTests();
-      setShowModal(false);
+  
+      if (response.data.status === "success") {
+        await fetchTests();
+        setShowModal(false);
+        setUpdateModalOpen(false);
+      } else {
+        throw new Error(response.data.message || 'Failed to save test');
+      }
     } catch (error) {
       console.error("Error saving test:", error);
       if (error.response?.status === 401 || error.response?.status === 403) {
@@ -400,11 +540,13 @@ const Tests = ({ sidebarVisible }) => {
       setIsSaving(false);
     }
   };
-
-  const handleClearFilter = () => {
+  const handleClearFilter = async () => {
     setSelectedTest(null);
+    await fetchTests(); // Fetch all tests when clearing filter
   };
-
+  const handleTestSelect = (selected) => {
+    setSelectedTest(selected);
+  };
   // New function from the updated version
   const renderQuestions = () => {
     return testQuestions.map((question, index) => (
@@ -517,7 +659,7 @@ const Tests = ({ sidebarVisible }) => {
         <td className="fw-light text-secondary ps-4">
           {new Date(test.created_at).toLocaleDateString()}
         </td>
-        <td className="fw-semibold text-primary">{test.title}</td>
+        <td className="text-muted">{test.title}</td>
         <td style={{ maxWidth: '200px' }}>
           <p className="mb-0 text-muted">{testDesc}</p>
           {test.desc.length > 100 && (
@@ -530,7 +672,11 @@ const Tests = ({ sidebarVisible }) => {
             </Button>
           )}
         </td>
-        <td className="text-success fw-medium">${test.price}</td>
+        <td className="text-muted fw-medium">
+         
+          {test.price}
+          <i className="fa-solid fa-bangladeshi-taka-sign ms-1"></i>
+        </td>
         <td>
           {correctedFilePath && (
             <Button
@@ -547,22 +693,13 @@ const Tests = ({ sidebarVisible }) => {
         <td className="text-center">
           <div className="d-flex gap-2 justify-content-center">
             <Button
-              variant="outline-warning"
-              size="sm"
-              onClick={() => handleEdit(test)}
-              className="px-2 py-1 rounded-2 border-0"
-              title="Edit Test"
-            >
-              <i className="fa-solid fa-pen-to-square text-dark"></i>
-            </Button>
-            <Button
               variant="outline-primary"
               size="sm"
               onClick={() => handleUpdate(test)}
               className="px-2 py-1 rounded-2 border-0"
               title="Manage Test"
             >
-              <i className="fa-solid fa-file-arrow-up text-primary"></i>
+              <i className="fa-solid fa-pen-to-square text-dark"></i>
             </Button>
           </div>
         </td>
@@ -636,24 +773,24 @@ const Tests = ({ sidebarVisible }) => {
                   </Form.Group>
                 </Col>
                 <Col md={4}>
-                  <Form.Group className="mb-3">
-                    <Form.Label className="fw-medium small text-secondary">Image</Form.Label>
-                    {modalData.file_path && (
-                      <div className="mb-2">
-                        <img
-                          src={modalData.file_path}
-                          alt="Test"
-                          className="img-fluid rounded"
-                        />
-                      </div>
-                    )}
-                    <Form.Control
-                      type="file"
-                      accept="image/*"
-                      size="sm"
-                      onChange={(e) => handleFileUpload(e.target.files[0])}
-                    />
-                  </Form.Group>
+                <Form.Group className="mb-3">
+  <Form.Label className="fw-medium small text-secondary">Image</Form.Label>
+  {modalData.file_path && (
+    <div className="mb-2">
+      <img
+        src={modalData.file_path}
+        alt="Test"
+        className="img-fluid rounded"
+      />
+    </div>
+  )}
+  <Form.Control
+    type="file"
+    accept="image/*"
+    size="sm"
+    onChange={(e) => handleFileUpload(e.target.files[0])}
+  />
+</Form.Group>
                 </Col>
               </Row>
 
@@ -834,15 +971,15 @@ const Tests = ({ sidebarVisible }) => {
           <div className="d-flex flex-wrap gap-3">
             <div className="d-flex align-items-center" style={{ width: '280px' }}>
               <div style={{ flex: 1 }}>
-                <Select
-                  options={allTests}
-                  value={selectedTest}
-                  onChange={setSelectedTest}
-                  placeholder="Select a test..."
-                  isClearable
-                  styles={customSelectStyles}
-                  className="select2-container"
-                />
+              <Select
+  options={filterOptions}
+  value={selectedTest}
+  onChange={handleTestSelect}
+  placeholder="Select a test..."
+  isClearable
+  styles={customSelectStyles}
+  className="select2-container"
+/>
               </div>
               <div className="ms-2 d-flex">
                 <Button
@@ -1025,8 +1162,8 @@ const Tests = ({ sidebarVisible }) => {
             </Modal.Body>
           </Modal>
     
-          {/* Questions Management Modal */}
-          <Modal 
+{/* Questions Management Modal */}
+<Modal 
   show={updateModalOpen} 
   onHide={() => setUpdateModalOpen(false)} 
   size="lg"
@@ -1058,253 +1195,258 @@ const Tests = ({ sidebarVisible }) => {
     </div>
 
     
-      {activeTab === 'details' ? (
-        <Form onSubmit={handleModalSubmit}>
-          <Row className="mb-3">
-            <Col md={8}>
-              <Form.Group className="mb-3">
-                <Form.Label className="fw-medium small text-secondary">Test Title</Form.Label>
-                <Form.Control
-                  required
-                  size="sm"
-                  value={modalData.title}
-                  onChange={(e) => setModalData(prev => ({ ...prev, title: e.target.value }))}
-                />
-              </Form.Group>
-
-              <Form.Group className="mb-3">
-                <Form.Label className="fw-medium small text-secondary">Description</Form.Label>
-                <Form.Control
-                  as="textarea"
-                  required
-                  rows={3}
-                  size="sm"
-                  value={modalData.desc}
-                  onChange={(e) => setModalData(prev => ({ ...prev, desc: e.target.value }))}
-                />
-              </Form.Group>
-            </Col>
-            <Col md={4}>
-              <Form.Group className="mb-3">
-                <Form.Label className="fw-medium small text-secondary">Image</Form.Label>
-                {modalData.file_path && (
-                  <div className="mb-2">
-                    <img
-                      src={modalData.file_path}
-                      alt="Test"
-                      className="img-fluid rounded"
-                    />
-                  </div>
-                )}
-                <Form.Control
-                  type="file"
-                  accept="image/*"
-                  size="sm"
-                  onChange={(e) => handleFileUpload(e.target.files[0])}
-                />
-              </Form.Group>
-            </Col>
-          </Row>
-
-          <Row className="g-3 mb-4">
-           
-            <Col md={6}>
-              <Form.Label className="fw-medium small text-secondary">Price ($)</Form.Label>
+    {activeTab === 'details' ? (
+      <Form onSubmit={handleModalSubmit}>
+        <Row className="mb-3">
+          <Col md={8}>
+            <Form.Group className="mb-3">
+              <Form.Label className="fw-medium small text-secondary">Test Title</Form.Label>
               <Form.Control
-                type="number"
                 required
                 size="sm"
-                value={modalData.price}
-                onChange={(e) => setModalData(prev => ({ ...prev, price: e.target.value }))}
+                value={modalData.title}
+                onChange={(e) => setModalData(prev => ({ ...prev, title: e.target.value }))}
               />
-            </Col>
-          </Row>
-
-          <div className="d-flex justify-content-end">
-            <Button 
-              type="submit" 
-              variant="primary" 
-              className="px-4"
-              size="sm"
-              disabled={isSaving}
-            >
-              {isSaving ? (
-                <>
-                  <Spinner animation="border" size="sm" className="me-2" />
-                  Saving...
-                </>
-              ) : (
-                'Save Changes'
-              )}
-            </Button>
-          </div>
-        </Form>
-      ) : (
-        <div>
-          <div className="mb-4 p-3 bg-light rounded border">
-            <p className="mb-2">
-              Please upload questions by attaching a '.xlsx' file (first tab only). Please 
-              <strong> download </strong> 
-              the file and follow the format below. You need to enter your information according to the format.
-            </p>
-            
-            <div className="d-flex align-items-center mb-3">
-              <Button 
-                variant="outline-primary" 
-                size="sm" 
-                className="d-flex align-items-center"
-                href="/assets/templates/mock_test_add_questions.xlsx" 
-                download
-              >
-                <i className="fa-solid fa-file-excel me-2"></i>
-                Download Template
-              </Button>
-              <span className="ms-2 small text-muted">(mock_test_add_questions.xlsx)</span>
-            </div>
-     
-          </div>
-
-          <div className="mb-4">
-            <Form.Group>
-              <Form.Label className="fw-medium small text-secondary">Upload Questions (XLSX)</Form.Label>
-              <div className="d-flex gap-2">
-                <Form.Control
-                  type="file"
-                  accept=".xlsx, .xls"
-                  size="sm"
-                  onChange={(e) => setQuestionFile(e.target.files[0])}
-                />
-                <Button
-                  variant="primary"
-                  size="sm"
-                  onClick={handleQuestionFileUpload}
-                  disabled={!questionFile || uploadingQuestions}
-                >
-                  {uploadingQuestions ? (
-                    <Spinner animation="border" size="sm" />
-                  ) : (
-                    <i className="fa-solid fa-upload"></i>
-                  )}
-                </Button>
-              </div>
             </Form.Group>
 
-            {uploadSuccess && (
-              <Alert variant="success" className="mt-3 py-2">
-                <i className="fa-solid fa-check-circle me-2"></i>
-                Questions uploaded successfully!
-              </Alert>
-            )}
-
-            {uploadError && (
-              <Alert variant="danger" className="mt-3 py-2">
-                <i className="fa-solid fa-exclamation-circle me-2"></i>
-                {uploadError}
-              </Alert>
-            )}
-          </div>
-
-          <div className="d-flex justify-content-between align-items-center mb-3">
-            <h6 className="mb-0">
-              Questions ({testQuestions.length})
-            </h6>
-            {testQuestions.length > 0 && (
-              <Button
-                variant="outline-danger"
+            <Form.Group className="mb-3">
+              <Form.Label className="fw-medium small text-secondary">Description</Form.Label>
+              <Form.Control
+                as="textarea"
+                required
+                rows={3}
                 size="sm"
-                className="rounded-pill px-3"
-                onClick={handleClearQuestions}
-                disabled={isClearing}
+                value={modalData.desc}
+                onChange={(e) => setModalData(prev => ({ ...prev, desc: e.target.value }))}
+              />
+            </Form.Group>
+          </Col>
+          <Col md={4}>
+            <Form.Group className="mb-3">
+              <Form.Label className="fw-medium small text-secondary">Image</Form.Label>
+              {modalData.file_path && (
+                <div className="mb-2">
+                  <img
+                    src={`${API_BASE_URL}${modalData.file_path}`}
+                    alt="Test"
+                    className="img-fluid rounded"
+                  />
+                </div>
+              )}
+              <Form.Control
+                type="file"
+                accept="image/*"
+                size="sm"
+                onChange={(e) => handleFileUpload(e.target.files[0])}
+              />
+            </Form.Group>
+          </Col>
+        </Row>
+
+        <Row className="g-3 mb-4">
+         
+          <Col md={6}>
+            <Form.Label className="fw-medium small text-secondary">Price ($)</Form.Label>
+            <Form.Control
+              type="number"
+              required
+              size="sm"
+              value={modalData.price}
+              onChange={(e) => setModalData(prev => ({ ...prev, price: e.target.value }))}
+            />
+          </Col>
+        </Row>
+
+        <div className="d-flex justify-content-end">
+          <Button 
+            type="submit" 
+            variant="primary" 
+            className="px-4"
+            size="sm"
+            disabled={isSaving}
+          >
+            {isSaving ? (
+              <>
+                <Spinner animation="border" size="sm" className="me-2" />
+                Saving...
+              </>
+            ) : (
+              'Save Changes'
+            )}
+          </Button>
+        </div>
+      </Form>
+    ) : (
+      <div>
+        <div className="mb-4 p-3 bg-light rounded border">
+          <p className="mb-2">
+            Please upload questions by attaching a '.xlsx' file (first tab only). Please 
+            <strong> download </strong> 
+            the file and follow the format below. You need to enter your information according to the format.
+          </p>
+          
+          <div className="d-flex align-items-center mb-3">
+            <Button 
+              variant="outline-primary" 
+              size="sm" 
+              className="d-flex align-items-center"
+              href="/assets/templates/mock_test_add_questions.xlsx" 
+              download
+            >
+              <i className="fa-solid fa-file-excel me-2"></i>
+              Download Template
+            </Button>
+            <span className="ms-2 small text-muted">(mock_test_add_questions.xlsx)</span>
+          </div>
+   
+        </div>
+
+        <div className="mb-4">
+          <Form.Group>
+            <Form.Label className="fw-medium small text-secondary">Upload Questions (XLSX)</Form.Label>
+            <div className="d-flex gap-2">
+            <Form.Control
+                type="file"
+                accept=".xlsx, .xls"
+                size="sm"
+                onChange={(e) => setQuestionFile(e.target.files[0])}
+              />
+              <Button
+                variant="primary"
+                size="sm"
+                onClick={handleQuestionFileUpload}
+                disabled={!questionFile || uploadingQuestions}
               >
-                {isClearing ? (
+                {uploadingQuestions ? (
                   <Spinner animation="border" size="sm" />
                 ) : (
-                  <>
-                    <i className="fa-solid fa-trash-can me-1"></i>
-                    Clear All
-                  </>
+                  <i className="fa-solid fa-upload"></i>
                 )}
               </Button>
-            )}
-          </div>
-
-          {isLoadingQuestions ? (
-            <div className="text-center py-5">
-              <Spinner animation="border" variant="primary" />
-              <p className="mt-2 text-muted">Loading questions...</p>
             </div>
-          ) : testQuestions.length === 0 ? (
-            <Alert variant="info">
-              <i className="fa-solid fa-info-circle me-2"></i>
-              No questions available. Upload an Excel file to add questions.
+          </Form.Group>
+
+          {uploadSuccess && (
+            <Alert variant="success" className="mt-3 py-2">
+              <i className="fa-solid fa-check-circle me-2"></i>
+              Questions uploaded successfully!
             </Alert>
-          ) : (
-            <div className="questions-list">
-              {testQuestions.map((question, index) => (
-                <Card key={question.id} className="mb-3 shadow-sm">
-                  <Card.Body>
-                  <div className="d-flex align-items-center gap-2">
-                    <Badge bg="secondary" className="rounded-pill">Q{index + 1}</Badge>
-                    <span className="text-primary small text-truncate" style={{ maxWidth: '400px' }}>
-                      {question.question || "No question available"}
-                    </span>
-                  </div>
+          )}
 
-                    <p className="mb-3">{question.question_text}</p>
-
-                    <div className="ps-3">
-                      {question.mock_test_ques_options?.map((option) => (
-                        <div
-                          key={option.id}
-                          className={`p-2 rounded mb-2 ${
-                            option.is_answer ? 'bg-success bg-opacity-10' : ''
-                          }`}
-                        >
-                         <i className={`fa-regular ${
-                            option.is_answer ? 'fa-circle-check text-success' : 'fa-circle'
-                          } me-2`}></i>
-                          {option.title}
-                        </div>
-                      ))}
-                    </div>
-
-                    {question.answer_detail && (
-                      <div className="mt-3 pt-2 border-top">
-                        <small className="text-muted">
-                          <i className="fa-solid fa-circle-info me-2"></i>
-                          {question.answer_detail}
-                        </small>
-                      </div>
-                    )}
-                  </Card.Body>
-                </Card>
-              ))}
-            </div>
+          {uploadError && (
+            <Alert variant="danger" className="mt-3 py-2">
+              <i className="fa-solid fa-exclamation-circle me-2"></i>
+              {uploadError}
+            </Alert>
           )}
         </div>
+
+        <div className="d-flex justify-content-between align-items-center mb-3">
+          <h6 className="mb-0">Questions ({testQuestions.length})</h6>
+          {testQuestions.length > 0 && (
+            <Button
+              variant="outline-danger"
+              size="sm"
+              className="rounded-pill px-3"
+              onClick={handleClearQuestions}
+              disabled={isClearing}
+            >
+              {isClearing ? (
+                <Spinner animation="border" size="sm" />
+              ) : (
+                <>
+                  <i className="fa-solid fa-trash-can me-1"></i>
+                  Clear All
+                </>
+              )}
+            </Button>
+          )}
+        </div>
+
+        {isLoadingQuestions ? (
+          <div className="text-center py-5">
+            <Spinner animation="border" variant="primary" />
+            <p className="mt-2 text-muted">Loading questions...</p>
+          </div>
+        ) : testQuestions.length === 0 ? (
+          <Alert variant="info">
+            <i className="fa-solid fa-info-circle me-2"></i>
+            No questions available. Upload an Excel file to add questions.
+          </Alert>
+        ) : (
+          <div className="questions-list">
+        {testQuestions.map((question, index) => (
+  <Card key={question.id} className="mb-3 shadow-sm">
+    <Card.Body>
+      <div className="d-flex justify-content-between align-items-start mb-3">
+        <div className="d-flex align-items-center gap-2">
+          <Badge bg="secondary" className="rounded-pill">Q{index + 1}</Badge>
+          <span className="text-primary small">
+            {question.mock_test_quest_type?.question_type || "Single Answer"}
+          </span>
+        </div>
+        <Button
+          variant="outline-danger"
+          size="sm"
+          className="rounded-pill px-2 py-0"
+          onClick={() => handleDeleteQuestion(question.id)}
+          disabled={isDeletingQuestion}
+        >
+          <i className="fa-solid fa-trash-can"></i>
+        </Button>
+      </div>
+
+      <p className="mb-3">{question.question}</p>
+
+      <div className="d-flex flex-wrap gap-2">
+        {question.mock_test_ques_options?.map((option) => (
+          <div
+            key={option.id}
+            className={`p-2 rounded ${
+              option.is_answer ? 'bg-success bg-opacity-10' : 'bg-light'
+            }`}
+            style={{ flex: '1 1 200px' }}
+          >
+            <i className={`fa-regular ${
+              option.is_answer ? 'fa-circle-check text-success' : 'fa-circle'
+            } me-2`}></i>
+            {option.title}
+          </div>
+        ))}
+      </div>
+
+      {question.answer_detail && (
+        <div className="mt-3 pt-2 border-top">
+          <small className="text-muted">
+            <i className="fa-solid fa-circle-info me-2"></i>
+            {question.answer_detail}
+          </small>
+        </div>
       )}
+    </Card.Body>
+  </Card>
+))}
+          </div>
+        )}
+      </div>
+    )}
   </Modal.Body>
 </Modal>
-
-
 {/* Image Preview Modal */}
-<Modal show={showFileModal} onHide={() => setShowFileModal(false)} size="lg" centered>
-<Modal.Header closeButton className="border-0 pb-0">
-  <Modal.Title className="text-primary fs-6">Image Preview</Modal.Title>
-</Modal.Header>
-<Modal.Body className="p-0 text-center">
-  <img 
-    src={fileModalSrc} 
-    className="img-fluid rounded-3 mb-3"
-    alt="Test Image"
-    style={{ maxHeight: '70vh' }}
-  />
-</Modal.Body>
-</Modal>
-</div>
-</div>
-);
+<Modal show={showFileModal} onHide={() => setShowFileModal(false)} centered>
+        <Modal.Header closeButton>
+          <Modal.Title className="fs-6">Image Preview</Modal.Title>
+        </Modal.Header>
+        <Modal.Body className="p-0">
+          <img src={fileModalSrc} alt="Preview" className="img-fluid" />
+        </Modal.Body>
+      </Modal>
+    </div>
+    </div>
+  );
+  
 };
 
-export default Tests;
 
+
+export default Tests;
