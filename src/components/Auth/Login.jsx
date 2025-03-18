@@ -5,13 +5,13 @@ import './Login.css'; // Import external CSS file
 
 const Login = () => {
   const navigate = useNavigate();
-
   const [formData, setFormData] = useState({
     email: '',
     password: '',
   });
 
   const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false); // New state for button disable
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -23,14 +23,17 @@ const Login = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setLoading(true); // Disable button
+    setError(''); // Clear previous errors
     const { email, password } = formData;
+
     try {
       axios.defaults.headers.post['Access-Control-Allow-Origin'] = '*';
       axios.defaults.headers.post['Content-Type'] = 'application/json';
-      const response = await axios.post('https://mocktestadminapi.lyricistsassociationbd.com/api/v1/login', {
-        email,
-        password,
-      });
+      const response = await axios.post(
+        'https://mocktestadminapi.perppilot.com/api/v1/login',
+        { email, password }
+      );
 
       if (response.data.status === 'success') {
         localStorage.setItem('authToken', response.data.data.user.access_token);
@@ -41,15 +44,15 @@ const Login = () => {
       }
     } catch (err) {
       setError('Something went wrong. Please try again.');
+    } finally {
+      setLoading(false); // Re-enable button
     }
   };
 
   return (
     <div className="login-container">
       <form onSubmit={handleSubmit} className="login-form">
-      <h2 className="text-center mb-4">
-  {/* <img src="/assets/lyricist-logo.png" alt="Logo" width="150" /> */}
-</h2>
+        <h2 className="text-center fs-2 fw-normal mb-2">MockTest</h2>
 
         {error && <div className="alert alert-danger">{error}</div>}
 
@@ -60,9 +63,10 @@ const Login = () => {
             name="email"
             id="email"
             className="form-control"
-            placeholder="Enter your email "
+            placeholder="Enter your email"
             value={formData.email}
             onChange={handleChange}
+            disabled={loading} // Disable input during login
           />
         </div>
 
@@ -76,10 +80,13 @@ const Login = () => {
             placeholder="Enter your password"
             value={formData.password}
             onChange={handleChange}
+            disabled={loading} // Disable input during login
           />
         </div>
 
-        <button type="submit" className="btn btn-primary w-100">Login</button>
+        <button type="submit" className="btn btn-primary w-100" disabled={loading}>
+          {loading ? 'Logging in...' : 'Login'}
+        </button>
       </form>
     </div>
   );

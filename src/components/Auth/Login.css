@@ -3,7 +3,7 @@
     display: flex;
     justify-content: center;
     align-items: center;
-    background: url('/assets/loginpagebg.jpg') no-repeat center center/cover; 
+    background: url('/assets/background.png') no-repeat center center/cover; 
   }
   
   .login-form {

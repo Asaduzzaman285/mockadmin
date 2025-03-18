@@ -6,7 +6,7 @@ import axios from 'axios';
 import Paginate from './Paginate';
 
 // Base URL configuration
-const API_BASE_URL = "https://mocktestadminapi.lyricistsassociationbd.com";
+const API_BASE_URL = "https://mocktestadminapi.perppilot.com";
 
 // Custom styles for Select component
 const customSelectStyles = {
@@ -50,15 +50,67 @@ const customSelectStyles = {
 // Modal Component
 const UserModal = ({ show, handleClose, handleSubmit, modalData, setModalData, isEditing, roles }) => {
   const [loading, setLoading] = useState(false);
+  const [passwordChanged, setPasswordChanged] = useState(false);
+  const [passwordValid, setPasswordValid] = useState(true);
+  const [passwordError, setPasswordError] = useState("");
+
+  // Password validation function
+  const validatePassword = (password) => {
+    // Skip validation if editing and password field is empty (keeping current password)
+    if (isEditing && (!password || password.trim() === '')) {
+      setPasswordValid(true);
+      setPasswordError("");
+      return true;
+    }
+
+    const hasUpperCase = /[A-Z]/.test(password);
+    const hasLowerCase = /[a-z]/.test(password);
+    const hasNumber = /[0-9]/.test(password);
+    const hasSpecialChar = /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(password);
+    
+    if (!hasUpperCase || !hasLowerCase || !hasNumber || !hasSpecialChar) {
+      setPasswordValid(false);
+      setPasswordError("Password must contain at least one upper case, lower case letter and one number and one special character.");
+      return false;
+    } else {
+      setPasswordValid(true);
+      setPasswordError("");
+      return true;
+    }
+  };
 
   const handleFormSubmit = (e) => {
     e.preventDefault();
+    
+    // Validate password before submitting
+    const isPasswordValid = validatePassword(modalData.password);
+    if (!isPasswordValid && (!isEditing || (isEditing && modalData.password.trim() !== ''))) {
+      return; // Don't proceed if password is invalid
+    }
+    
     setLoading(true); // Disable button and show "Processing..."
     
     setTimeout(() => {
-      handleSubmit(e);
+      // If password field is empty and not changed, don't include it in the submission
+      if (isEditing && !passwordChanged) {
+        const submitData = { ...modalData };
+        delete submitData.password;
+        handleSubmit(e, submitData);
+      } else {
+        handleSubmit(e, modalData);
+      }
       setLoading(false); // Enable button after delay
     }, 2500); // 2.5 seconds delay
+  };
+
+  // Handle password change and track if it's been modified
+  const handlePasswordChange = (e) => {
+    const newPassword = e.target.value;
+    setModalData({ ...modalData, password: newPassword });
+    setPasswordChanged(true);
+    
+    // Validate password as user types
+    validatePassword(newPassword);
   };
 
   return (
@@ -86,7 +138,14 @@ const UserModal = ({ show, handleClose, handleSubmit, modalData, setModalData, i
               value={modalData.email}
               onChange={(e) => setModalData({ ...modalData, email: e.target.value })}
               required
+              readOnly={isEditing}
+              className={isEditing ? "bg-light" : ""}
             />
+            {isEditing && (
+              <Form.Text className="text-muted">
+                Email cannot be modified after user creation.
+              </Form.Text>
+            )}
           </Form.Group>
           <Form.Group className="mb-3" controlId="formRole">
             <Form.Label>Role</Form.Label>
@@ -115,18 +174,33 @@ const UserModal = ({ show, handleClose, handleSubmit, modalData, setModalData, i
               <option value="0">Inactive</option>
             </Form.Control>
           </Form.Group>
-          {!isEditing && (
-            <Form.Group className="mb-3" controlId="formPassword">
-              <Form.Label>Password</Form.Label>
-              <Form.Control
-                type="password"
-                placeholder="Enter password"
-                value={modalData.password}
-                onChange={(e) => setModalData({ ...modalData, password: e.target.value })}
-                required
-              />
-            </Form.Group>
-          )}
+          <Form.Group className="mb-3" controlId="formPassword">
+            <Form.Label>{isEditing ? "Change Password" : "Password"}</Form.Label>
+            <Form.Control
+              type="password"
+              placeholder={isEditing ? "Enter new password or leave blank to keep current" : "Enter password"}
+              value={modalData.password}
+              onChange={handlePasswordChange}
+              required={!isEditing}
+              isInvalid={!passwordValid && (modalData.password.trim() !== '' || !isEditing)}
+              className={passwordValid ? "" : "border-danger"}
+            />
+            {isEditing && passwordValid && (
+              <Form.Text className="text-muted">
+                Leave blank to keep the current password.
+              </Form.Text>
+            )}
+            {!passwordValid && modalData.password.trim() !== '' && (
+              <Form.Text className="text-danger">
+                {passwordError}
+              </Form.Text>
+            )}
+            {passwordValid && modalData.password.trim() !== '' && (
+              <Form.Text className="text-success">
+                Password meets requirements.
+              </Form.Text>
+            )}
+          </Form.Group>
           <div className="d-flex justify-content-end mt-4">
             <Button variant="secondary" onClick={handleClose} className="me-2">
               Cancel
@@ -134,7 +208,7 @@ const UserModal = ({ show, handleClose, handleSubmit, modalData, setModalData, i
             <Button 
               variant="primary" 
               type="submit" 
-              disabled={loading}
+              disabled={loading || (!passwordValid && (modalData.password.trim() !== '' || !isEditing))}
               className="px-4"
             >
               {loading ? "Processing..." : isEditing ? "Update" : "Add"} User
@@ -146,8 +220,9 @@ const UserModal = ({ show, handleClose, handleSubmit, modalData, setModalData, i
   );
 };
 
+
 // Main UserPage Component
-const UserPage = ({ sidebarVisible }) => {
+const UserPage = ({ sidebarVisible: propSidebarVisible }) => {
   const navigate = useNavigate();
   const [users, setUsers] = useState([]);
   const [filteredUsers, setFilteredUsers] = useState([]);
@@ -181,6 +256,21 @@ const UserPage = ({ sidebarVisible }) => {
   const [loading, setLoading] = useState(true);
   const [authError, setAuthError] = useState(false);
   const [tableLoading, setTableLoading] = useState(false);
+  
+  // New state for tracking sidebar visibility based on screen size
+  const [sidebarVisible, setSidebarVisible] = useState(propSidebarVisible);
+
+  // Track screen size changes
+  useEffect(() => {
+    const handleResize = () => {
+      setSidebarVisible(window.innerWidth > 992 ? propSidebarVisible : false);
+    };
+    
+    window.addEventListener('resize', handleResize);
+    handleResize(); // Set initial value
+    
+    return () => window.removeEventListener('resize', handleResize);
+  }, [propSidebarVisible]);
 
   // Fetch filter options (name list with emails)
   const getFilterOptions = async () => {
@@ -433,7 +523,7 @@ const UserPage = ({ sidebarVisible }) => {
     setShowModal(true);
   };
 
-  const handleModalSubmit = async (e) => {
+  const handleModalSubmit = async (e, submitData = modalData) => {
     e.preventDefault();
     const token = localStorage.getItem('authToken');
     if (!token) {
@@ -442,17 +532,25 @@ const UserPage = ({ sidebarVisible }) => {
       return;
     }
     
-    const { id, name, email, role_ids, status, password } = modalData;
-  
     try {
       if (isEditing) {
-        const response = await axios.post(`${API_BASE_URL}/api/v1/updateUser`, {
+        const { id, name, email, role_ids, status, password } = submitData;
+        
+        // Create payload based on whether password was changed
+        const payload = {
           id,
           name,
           email,
           role_ids,
           status
-        }, {
+        };
+        
+        // Only include password if it was provided
+        if (password && password.trim() !== '') {
+          payload.password = password;
+        }
+        
+        const response = await axios.post(`${API_BASE_URL}/api/v1/updateUser`, payload, {
           headers: {
             "Content-Type": "application/json",
             "Authorization": `Bearer ${token}`
@@ -469,6 +567,7 @@ const UserPage = ({ sidebarVisible }) => {
           getFilterOptions(); // Refresh the filter options
         }
       } else {
+        const { name, email, role_ids, status, password } = submitData;
         const response = await axios.post(`${API_BASE_URL}/api/v1/createUser`, {
           name,
           email,
@@ -510,10 +609,11 @@ const UserPage = ({ sidebarVisible }) => {
   
   // Updated container style to match Tests page
   const containerStyle = {
-    padding: sidebarVisible ? '80px 0% 0 15%' : '80px 0% 0 0%',
+    padding: sidebarVisible ? '80px 0% 0px 18%' : '70px 0% 0px 0%',
     backgroundColor: '#f8f9fa',
     minHeight: '100vh',
     transition: 'all 0.3s ease',
+    width: '100%',
   };
   
   // Redirect to login if authentication error
@@ -552,7 +652,7 @@ const UserPage = ({ sidebarVisible }) => {
   
           {/* Updated filter section styling */}
           <div className="d-flex flex-wrap gap-3">
-            <div className="d-flex align-items-center" style={{ minWidth: '280px' }}>
+            <div className="d-flex align-items-center" style={{ width: '40%' }}>
               <div style={{ flex: 1 }}>
                 <Select
                   options={nameOptions}

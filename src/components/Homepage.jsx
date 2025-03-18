@@ -1,16 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { Breadcrumb, Spinner, Alert } from 'react-bootstrap';
 import 'bootstrap/dist/css/bootstrap.min.css';
 
 const cardData = [
   { title: 'Users', path: '/admin/user', color: '#0d6efd', icon: 'fa-solid fa-users' },
-  // { title: 'Events', path: '/admin/events', color: 'rgb(51, 102, 153)', icon: 'fa-solid fa-calendar-days' },
-  // { title: 'Members', path: '/admin/members', color: 'rgb(102, 153, 204)', icon: 'fa-solid fa-person' },
-  // { title: 'Sliders', path: '/admin/sliders', color: 'rgb(153, 204, 255)', icon: 'fa-solid fa-sliders' },
-  // { title: 'Products', path: '/admin/products', color: 'rgb(49, 84, 166)', icon: 'fa-brands fa-product-hunt' },
-  // { title: 'Success Stories', path: '/admin/success_stories', color: 'rgb(108, 119, 183)', icon: 'fa-solid fa-book-medical' },
-  // { title: 'Ads', path: '/admin/ads', color: 'rgb(142, 141, 193)', icon: 'fa-solid fa-rectangle-ad' },
   { title: 'Tests', path: '/admin/tests', color: '#6c757d', icon: 'fa-solid fa-file-circle-check' },
 ];
 
@@ -33,31 +27,60 @@ const InfoCard = ({ title, path, color, icon }) => {
   );
 };
 
-const Homepage = ({ sidebarVisible }) => {
+const Homepage = ({ sidebarVisible: propSidebarVisible }) => {
   const navigate = useNavigate();
   const [isLoading, setIsLoading] = useState(true);
   const [authError, setAuthError] = useState(false);
-  
-  // Updated container style to match other pages
+  const [sidebarVisible, setSidebarVisible] = useState(propSidebarVisible);
+  const [screenWidth, setScreenWidth] = useState(window.innerWidth);
+
+  // Track screen size changes and update sidebar visibility
+  useEffect(() => {
+    const handleResize = () => {
+      const width = window.innerWidth;
+      setScreenWidth(width);
+      
+      // On larger screens, respect the prop value
+      if (width > 768) {
+        setSidebarVisible(propSidebarVisible);
+      }
+    };
+
+    window.addEventListener('resize', handleResize);
+    handleResize(); // Set initial value
+    
+    return () => window.removeEventListener('resize', handleResize);
+  }, [propSidebarVisible]);
+
+  // Update when prop changes
+  useEffect(() => {
+    if (screenWidth > 992) {
+      setSidebarVisible(propSidebarVisible);
+    }
+  }, [propSidebarVisible, screenWidth]);
+
   const containerStyle = {
-    padding: sidebarVisible ? '80px 0% 0 15%' : '80px 0% 0 0%',
+    padding: sidebarVisible && screenWidth > 992 
+      ? '80px 0% 0px 18%' 
+      : screenWidth <= 768 
+        ? '70px 5% 0px 5%' 
+        : '70px 5% 0px 5%',
     backgroundColor: '#f8f9fa',
     minHeight: '100vh',
-    transition: 'all 0.3s ease',
+    width: '100%',
+    transition: 'padding 0.3s ease-in-out'
   };
 
   useEffect(() => {
-    // Simulate loading for consistency with other pages
     const timer = setTimeout(() => {
       setIsLoading(false);
     }, 1000);
-    
-    // Check if user is authenticated
+
     const token = localStorage.getItem('authToken');
     if (!token) {
       setAuthError(true);
     }
-    
+
     return () => clearTimeout(timer);
   }, []);
 
@@ -110,13 +133,6 @@ const Homepage = ({ sidebarVisible }) => {
             <InfoCard key={index} title={card.title} path={card.path} color={card.color} icon={card.icon} />
           ))}
         </div>
-        
-        {/* <div className="copyright mt-5 text-end">
-          Made with <span style={{ color: 'red' }}>❤️</span> by{' '}
-          <a href="https://wintelbd.com/" target="_blank" rel="noopener noreferrer" style={{ textDecoration: 'none', color: '#007BFF' }}>
-            Wintel Limited
-          </a>
-        </div> */}
       </div>
     </div>
   );

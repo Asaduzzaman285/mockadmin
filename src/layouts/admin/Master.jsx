@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import Navbar from './Navbar';
 import Sidebar from './Sidebar';
@@ -9,18 +9,36 @@ import '../../assets/admin/js/scripts.js';
 
 const Master = () => {
   const [sidebarVisible, setSidebarVisible] = useState(true);
+  const [isMobile, setIsMobile] = useState(window.innerWidth <= 992);
+
+  useEffect(() => {
+    const handleResize = () => {
+      const mobile = window.innerWidth <= 992;
+      setIsMobile(mobile);
+      // Only auto-hide on mobile, don't override user toggle
+      if (mobile && sidebarVisible) {
+        setSidebarVisible(false);
+      }
+    };
+
+    window.addEventListener('resize', handleResize);
+    handleResize();
+    return () => window.removeEventListener('resize', handleResize);
+  }, [sidebarVisible]);
 
   const handleSidebarToggle = () => {
-    setSidebarVisible(!sidebarVisible);
+    setSidebarVisible(prev => !prev);
   };
 
   return (
-    <div className={`sb-nav-fixed ${sidebarVisible ? '' : 'sb-sidenav-toggled'}`}>
-      <Navbar onSidebarToggle={handleSidebarToggle} />
+    <div className={`sb-nav-fixed ${!sidebarVisible ? 'sb-sidenav-toggled' : ''}`}>
+      <Navbar onSidebarToggle={handleSidebarToggle} isMobile={isMobile} />
       <div id="layoutSidenav">
-        <div id="layoutSidenav_nav" className={sidebarVisible ? '' : 'd-none'}>
+        <div id="layoutSidenav_nav" 
+          className={`${isMobile ? 'mobile-nav' : ''} ${sidebarVisible ? '' : 'd-none'}`}
+        >
           <Sidebar />
-        </div>
+        </div> 
         <div className="layoutSidenav_content">
           <main>
             <Routes>

@@ -5,7 +5,7 @@ import Paginate from './Paginate';
 import { useNavigate, Link } from 'react-router-dom';
 import Select from 'react-select';
 import './test.css';
-const Tests = ({ sidebarVisible }) => {
+const Tests = ({ sidebarVisible: propSidebarVisible }) => {
   const [tests, setTests] = useState([]);
   const [filteredTests, setFilteredTests] = useState([]);
   const [currentPage, setCurrentPage] = useState(1);
@@ -45,9 +45,11 @@ const Tests = ({ sidebarVisible }) => {
   const [isClearing, setIsClearing] = useState(false);
   const [isDeletingQuestion, setIsDeletingQuestion] = useState(false);
   const [activeTab, setActiveTab] = useState('details'); // 'details' or 'questions'
-  
+  // New state for tracking sidebar visibility and screen size
+  const [sidebarVisible, setSidebarVisible] = useState(propSidebarVisible);
+  const [screenWidth, setScreenWidth] = useState(window.innerWidth);
   const navigate = useNavigate();
-  const API_BASE_URL = "https://mocktestadminapi.lyricistsassociationbd.com";
+  const API_BASE_URL = "https://mocktestadminapi.perppilot.com";
   const fileRef = useRef(null);
 
   useEffect(() => {
@@ -67,6 +69,38 @@ const Tests = ({ sidebarVisible }) => {
   //     filterTests();
   //   }
   // }, [selectedTest, tests]);
+// Track screen size changes with better responsiveness
+useEffect(() => {
+  const handleResize = () => {
+    const width = window.innerWidth;
+    setScreenWidth(width);
+    
+    // Update sidebar visibility based on screen width
+    if (width <= 992) {
+      // Always hide sidebar on small screens
+      setSidebarVisible(false);
+    } else {
+      // On larger screens, respect the prop value
+      setSidebarVisible(propSidebarVisible);
+    }
+  };
+  
+  window.addEventListener('resize', handleResize);
+  handleResize(); // Set initial value
+  
+  return () => window.removeEventListener('resize', handleResize);
+}, [propSidebarVisible]);
+ 
+const containerStyle = {
+  padding: sidebarVisible ? '80px 0% 0px 18%' : '70px 0% 0px 0%',
+  backgroundColor: '#f8f9fa',
+  minHeight: '100vh',
+  transition: 'all 0.3s ease',
+  width: '100%',
+};
+const selectContainerStyle = {
+  width: screenWidth <= 576 ? '100%' : screenWidth <= 992 ? '60%' : '40%',
+};
 
   const filterTests = async () => {
     if (selectedTest) {
@@ -601,12 +635,6 @@ const handleQuestionFileUpload = async () => {
     ));
   };
 
-  const containerStyle = {
-    padding: sidebarVisible ? '80px 0% 0 15%' : '80px 0% 0 0%',
-    backgroundColor: '#f8f9fa',
-    minHeight: '100vh',
-    transition: 'all 0.3s ease',
-  };
 
   const customSelectStyles = {
     control: (base) => ({
@@ -656,12 +684,12 @@ const handleQuestionFileUpload = async () => {
 
       return (
         <tr key={test.id} className="align-middle">
-        <td className="fw-light text-secondary ps-4">
+        <td className="fw-light text-secondary ps-4 small" >
           {new Date(test.created_at).toLocaleDateString()}
         </td>
-        <td className="text-muted">{test.title}</td>
+        <td className="text-muted small">{test.title}</td>
         <td style={{ maxWidth: '200px' }}>
-          <p className="mb-0 text-muted">{testDesc}</p>
+          <p className="mb-0 small text-muted">{testDesc}</p>
           {test.desc.length > 100 && (
             <Button
               variant="link"
@@ -672,10 +700,10 @@ const handleQuestionFileUpload = async () => {
             </Button>
           )}
         </td>
-        <td className="text-muted fw-medium">
-         
+        <td className="text-muted small fw-medium">
+        <i className="fa-solid small fa-bangladeshi-taka-sign "></i>
           {test.price}
-          <i className="fa-solid fa-bangladeshi-taka-sign ms-1"></i>
+          
         </td>
         <td>
           {correctedFilePath && (
@@ -1196,87 +1224,80 @@ const handleQuestionFileUpload = async () => {
 
     
     {activeTab === 'details' ? (
-      <Form onSubmit={handleModalSubmit}>
-        <Row className="mb-3">
-          <Col md={8}>
-            <Form.Group className="mb-3">
-              <Form.Label className="fw-medium small text-secondary">Test Title</Form.Label>
-              <Form.Control
-                required
-                size="sm"
-                value={modalData.title}
-                onChange={(e) => setModalData(prev => ({ ...prev, title: e.target.value }))}
-              />
-            </Form.Group>
+  <Form onSubmit={handleModalSubmit} className="p-4">
+    <Form.Group className="mb-3">
+      <Form.Label className="fw-medium small text-secondary">Test Title</Form.Label>
+      <Form.Control
+        required
+        size="sm"
+        value={modalData.title}
+        onChange={(e) => setModalData(prev => ({ ...prev, title: e.target.value }))}
+      />
+    </Form.Group>
 
-            <Form.Group className="mb-3">
-              <Form.Label className="fw-medium small text-secondary">Description</Form.Label>
-              <Form.Control
-                as="textarea"
-                required
-                rows={3}
-                size="sm"
-                value={modalData.desc}
-                onChange={(e) => setModalData(prev => ({ ...prev, desc: e.target.value }))}
-              />
-            </Form.Group>
-          </Col>
-          <Col md={4}>
-            <Form.Group className="mb-3">
-              <Form.Label className="fw-medium small text-secondary">Image</Form.Label>
-              {modalData.file_path && (
-                <div className="mb-2">
-                  <img
-                    src={`${API_BASE_URL}${modalData.file_path}`}
-                    alt="Test"
-                    className="img-fluid rounded"
-                  />
-                </div>
-              )}
-              <Form.Control
-                type="file"
-                accept="image/*"
-                size="sm"
-                onChange={(e) => handleFileUpload(e.target.files[0])}
-              />
-            </Form.Group>
-          </Col>
-        </Row>
+    <Form.Group className="mb-3">
+      <Form.Label className="fw-medium small text-secondary">Price (BDT)</Form.Label>
+      <Form.Control
+        type="number"
+        required
+        size="sm"
+        value={modalData.price}
+        onChange={(e) => setModalData(prev => ({ ...prev, price: e.target.value }))}
+      />
+    </Form.Group>
 
-        <Row className="g-3 mb-4">
-         
-          <Col md={6}>
-            <Form.Label className="fw-medium small text-secondary">Price ($)</Form.Label>
-            <Form.Control
-              type="number"
-              required
-              size="sm"
-              value={modalData.price}
-              onChange={(e) => setModalData(prev => ({ ...prev, price: e.target.value }))}
-            />
-          </Col>
-        </Row>
+    <Form.Group className="mb-3">
+      <Form.Label className="fw-medium small text-secondary">Description</Form.Label>
+      <Form.Control
+        as="textarea"
+        required
+        rows={3}
+        size="sm"
+        value={modalData.desc}
+        onChange={(e) => setModalData(prev => ({ ...prev, desc: e.target.value }))}
+      />
+    </Form.Group>
 
-        <div className="d-flex justify-content-end">
-          <Button 
-            type="submit" 
-            variant="primary" 
-            className="px-4"
-            size="sm"
-            disabled={isSaving}
-          >
-            {isSaving ? (
-              <>
-                <Spinner animation="border" size="sm" className="me-2" />
-                Saving...
-              </>
-            ) : (
-              'Save Changes'
-            )}
-          </Button>
+    <Form.Group className="mb-4">
+      <Form.Label className="fw-medium small text-secondary">Image</Form.Label>
+      {modalData.file_path && (
+        <div className="mb-2">
+          <img
+            src={modalData.file_path}
+            alt="Test"
+            className="img-fluid rounded"
+            style={{ maxHeight: '200px' }}
+          />
         </div>
-      </Form>
-    ) : (
+      )}
+      <Form.Control
+        type="file"
+        accept="image/*"
+        size="sm"
+        onChange={(e) => handleFileUpload(e.target.files[0])}
+      />
+    </Form.Group>
+
+    <div className="d-flex justify-content-end">
+      <Button 
+        type="submit" 
+        variant="primary" 
+        className="px-4"
+        size="sm"
+        disabled={isSaving}
+      >
+        {isSaving ? (
+          <>
+            <Spinner animation="border" size="sm" className="me-2" />
+            Saving...
+          </>
+        ) : (
+          'Save Changes'
+        )}
+      </Button>
+    </div>
+  </Form>
+) : (
       <div>
         <div className="mb-4 p-3 bg-light rounded border">
           <p className="mb-2">
@@ -1375,58 +1396,67 @@ const handleQuestionFileUpload = async () => {
           </Alert>
         ) : (
           <div className="questions-list">
-        {testQuestions.map((question, index) => (
-  <Card key={question.id} className="mb-3 shadow-sm">
-    <Card.Body>
-      <div className="d-flex justify-content-between align-items-start mb-3">
-        <div className="d-flex align-items-center gap-2">
-          <Badge bg="secondary" className="rounded-pill">Q{index + 1}</Badge>
-          <span className="text-primary small">
-            {question.mock_test_quest_type?.question_type || "Single Answer"}
-          </span>
+          {testQuestions.map((question, index) => (
+            <Card key={question.id} className="mb-3 shadow-sm">
+              <Card.Body>
+                <div className="d-flex justify-content-between align-items-start mb-3">
+                  <div className="d-flex align-items-center gap-2">
+                    <Badge bg="secondary" className="rounded-pill">Q{index + 1}</Badge>
+                    <span className="text-primary small">
+                      {question.mock_test_quest_type?.question_type || "Single Answer"}
+                    </span>
+                  </div>
+                  <Button
+                    variant="outline-danger"
+                    size="sm"
+                    className="rounded-pill px-2 py-0"
+                    onClick={() => handleDeleteQuestion(question.id)}
+                    disabled={isDeletingQuestion}
+                  >
+                    <i className="fa-solid fa-trash-can"></i>
+                  </Button>
+                </div>
+        
+                <p className="mb-3 small">{question.question}</p>
+        
+        <div className="d-flex gap-2 small" style={{ flexWrap: 'nowrap', overflowX: 'auto' }}>
+          {question.mock_test_ques_options?.map((option) => (
+            <div
+              key={option.id}
+              className={`p-2 rounded small ${
+                option.is_answer ? 'bg-success bg-opacity-10' : 'bg-light'
+              }`}
+              style={{ 
+                minWidth: '150px',
+                maxWidth: '200px',
+                flex: '1 0 auto',
+                display: 'flex',
+                alignItems: 'center'
+              }}
+            >
+              <i className={`fa-regular small ${
+                option.is_answer ? 'fa-circle-check text-success' : 'fa-circle'
+              } me-2`}></i>
+              <span className="text-truncate small" style={{ flex: 1 }}>
+                {option.title}
+              </span>
+            </div>
+          ))}
         </div>
-        <Button
-          variant="outline-danger"
-          size="sm"
-          className="rounded-pill px-2 py-0"
-          onClick={() => handleDeleteQuestion(question.id)}
-          disabled={isDeletingQuestion}
-        >
-          <i className="fa-solid fa-trash-can"></i>
-        </Button>
-      </div>
 
-      <p className="mb-3">{question.question}</p>
-
-      <div className="d-flex flex-wrap gap-2">
-        {question.mock_test_ques_options?.map((option) => (
-          <div
-            key={option.id}
-            className={`p-2 rounded ${
-              option.is_answer ? 'bg-success bg-opacity-10' : 'bg-light'
-            }`}
-            style={{ flex: '1 1 200px' }}
-          >
-            <i className={`fa-regular ${
-              option.is_answer ? 'fa-circle-check text-success' : 'fa-circle'
-            } me-2`}></i>
-            {option.title}
-          </div>
-        ))}
-      </div>
-
-      {question.answer_detail && (
-        <div className="mt-3 pt-2 border-top">
-          <small className="text-muted">
-            <i className="fa-solid fa-circle-info me-2"></i>
-            {question.answer_detail}
-          </small>
+        
+                {question.answer_detail && (
+                  <div className="mt-3 pt-2 border-top">
+                    <small className="text-muted">
+                      <i className="fa-solid fa-circle-info me-2"></i>
+                      {question.answer_detail}
+                    </small>
+                  </div>
+                )}
+              </Card.Body>
+            </Card>
+          ))}
         </div>
-      )}
-    </Card.Body>
-  </Card>
-))}
-          </div>
         )}
       </div>
     )}
