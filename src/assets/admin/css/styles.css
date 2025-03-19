@@ -10924,7 +10924,23 @@ body {
   opacity: 0.5;
   transition: opacity 0.3s ease-in-out;
 }
+@media (max-width: 992px) {
+  .sb-nav-fixed #layoutSidenav #layoutSidenav_nav {
+    width: 200px;
+    height: auto!important;
+    z-index: 1038;
+   
+  }
+}
+@media (max-width: 768px) {
+  .sb-sidenav-toggled .page-content {
+    margin-top: 35% !important;  /* Only when sidebar is open */
+  }
+}
 
+.page-content {
+  margin-top: 0;
+}
 @media (min-width: 992px) {
   #layoutSidenav #layoutSidenav_nav {
     transform: translateX(0);
@@ -11075,7 +11091,17 @@ body {
 .sb-sidenav-dark .sb-sidenav-footer {
   background-color: #343a40;
 }
+@media (max-width: 992px) {
+  #layoutSidenav_nav {
+    height: 100vh; /* Full height for medium screens */
+  }
+}
 
+@media (max-width: 768px) {
+  #layoutSidenav_nav {
+    height: 80vh; /* Adjusted height for small screens */
+  }
+}
 .sb-sidenav-light {
   background-color: #f8f9fa;
   color: #212529;

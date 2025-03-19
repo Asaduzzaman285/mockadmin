@@ -6,6 +6,7 @@ import 'bootstrap/dist/css/bootstrap.min.css';
 const cardData = [
   { title: 'Users', path: '/admin/user', color: '#0d6efd', icon: 'fa-solid fa-users' },
   { title: 'Tests', path: '/admin/tests', color: '#6c757d', icon: 'fa-solid fa-file-circle-check' },
+
 ];
 
 const InfoCard = ({ title, path, color, icon }) => {
@@ -27,30 +28,23 @@ const InfoCard = ({ title, path, color, icon }) => {
   );
 };
 
-const Homepage = ({ sidebarVisible: propSidebarVisible }) => {
+const Homepage = ({ sidebarVisible: propSidebarVisible, setSidebarVisible }) => {
   const navigate = useNavigate();
   const [isLoading, setIsLoading] = useState(true);
   const [authError, setAuthError] = useState(false);
-  const [sidebarVisible, setSidebarVisible] = useState(propSidebarVisible);
   const [screenWidth, setScreenWidth] = useState(window.innerWidth);
 
   // Track screen size changes and update sidebar visibility
   useEffect(() => {
     const handleResize = () => {
-      const width = window.innerWidth;
-      setScreenWidth(width);
-      
-      // On larger screens, respect the prop value
-      if (width > 768) {
-        setSidebarVisible(propSidebarVisible);
-      }
+      setScreenWidth(window.innerWidth);
     };
 
     window.addEventListener('resize', handleResize);
     handleResize(); // Set initial value
     
     return () => window.removeEventListener('resize', handleResize);
-  }, [propSidebarVisible]);
+  }, []);
 
   // Update when prop changes
   useEffect(() => {
@@ -60,11 +54,9 @@ const Homepage = ({ sidebarVisible: propSidebarVisible }) => {
   }, [propSidebarVisible, screenWidth]);
 
   const containerStyle = {
-    padding: sidebarVisible && screenWidth > 992 
-      ? '80px 0% 0px 18%' 
-      : screenWidth <= 768 
-        ? '70px 5% 0px 5%' 
-        : '70px 5% 0px 5%',
+    padding: propSidebarVisible 
+      ? (screenWidth > 992 ? '80px 0% 0px 18%' : '70px 0% 0px 0%')
+      : '70px 5% 0px 5%',
     backgroundColor: '#f8f9fa',
     minHeight: '100vh',
     width: '100%',
@@ -114,7 +106,10 @@ const Homepage = ({ sidebarVisible: propSidebarVisible }) => {
   }
 
   return (
-    <div style={containerStyle}>
+    <div 
+    style={containerStyle} 
+    className={propSidebarVisible ? 'mobile-sidebar-open' : ''}
+  >
       <div className="px-4">
         <div className="mb-3 pb-2 border-bottom">
           <div className="d-flex justify-content-between align-items-center">

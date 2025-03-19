@@ -635,7 +635,7 @@ const UserPage = ({ sidebarVisible: propSidebarVisible }) => {
   }
   
   return (
-    <div style={containerStyle}>
+    <div style={containerStyle} >   
       <div className="px-4">
         {/* Updated header section styling */}
         <div className="mb-3 pb-2 border-bottom">

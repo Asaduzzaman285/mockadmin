@@ -1,13 +1,7 @@
 import React from 'react';
 import Homepage from '../components/Homepage';
 import UserPage from '../components/UserPage';
-import Memberpage from '../components/Memberpage';
-import Eventpage from '../components/Eventpage';
-import Contentpage from '../components/Contentpage';
-import SuccessStories from '../components/SuccessStories';
-import Sliders from '../components/Sliders';
-import Ads from '../components/Ads';
-import Orders from '../components/Orders';
+
 import Tests from '../components/Tests';
 import MockTest from '../components/MockTest';
 

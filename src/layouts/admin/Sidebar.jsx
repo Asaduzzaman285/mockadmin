@@ -13,7 +13,7 @@ const Sidebar = () => {
 
   return (
     <nav className="sb-sidenav accordion sb-sidenav-dark" id="sidenavAccordion">
-      <div className="sb-sidenav-menu">
+      <div className="sb-sidenav-menu ">
         <div className="nav">
           <NavLink className="nav-link" to="/admin/home" activeClassName="active">
             <div className="sb-nav-link-icon">
