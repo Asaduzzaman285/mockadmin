@@ -10924,17 +10924,38 @@ body {
   opacity: 0.5;
   transition: opacity 0.3s ease-in-out;
 }
-@media (max-width: 992px) {
+/* For screens between 768px and 992px */
+@media (min-width: 768px) and (max-width: 991.98px) {
   .sb-nav-fixed #layoutSidenav #layoutSidenav_nav {
-    width: 200px;
-    height: auto!important;
+    width: 225px;
+    height: 100vh !important;
     z-index: 1038;
-   
+    transform: translateX(0);
+  }
+  
+  .sb-sidenav-toggled #layoutSidenav #layoutSidenav_nav {
+    transform: translateX(-225px);
+  }
+  
+  .sb-sidenav-toggled #layoutSidenav #layoutSidenav_content {
+    margin-left: 0;
   }
 }
-@media (max-width: 768px) {
+
+/* For mobile screens below 768px */
+@media (max-width: 767.98px) {
+  .sb-nav-fixed #layoutSidenav #layoutSidenav_nav {
+    width: 240px;
+    height: 100vh !important;
+    transform: translateX(-240px);
+  }
+  
+  .sb-sidenav-toggled #layoutSidenav #layoutSidenav_nav {
+    transform: translateX(0);
+  }
+  
   .sb-sidenav-toggled .page-content {
-    margin-top: 35% !important;  /* Only when sidebar is open */
+    margin-top: 0 !important;
   }
 }
 

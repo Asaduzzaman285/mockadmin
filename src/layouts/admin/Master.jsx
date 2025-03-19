@@ -5,25 +5,29 @@ import Sidebar from './Sidebar';
 import Footer from './Footer';
 import routes from '../../routes/routes';
 import '../../assets/admin/css/styles.css';
+import '../../assets/admin/css/custom.css';
+
 const Master = () => {
-  const [isMobile, setIsMobile] = useState(window.innerWidth <= 992); // Initialize isMobile first
-  const [sidebarVisible, setSidebarVisible] = useState(!isMobile); // Use isMobile to set initial sidebarVisible
+  const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
+  const [sidebarVisible, setSidebarVisible] = useState(window.innerWidth >= 768);
 
   useEffect(() => {
     const handleResize = () => {
-      const mobile = window.innerWidth <= 992;
-      setIsMobile(mobile);
-      if (mobile) {
-        setSidebarVisible(false); // Ensure sidebar is hidden by default on mobile
-      } else {
-        setSidebarVisible(true); // Show sidebar by default on larger screens
+      const width = window.innerWidth;
+      setIsMobile(width < 768);
+      
+      // Only update sidebar visibility based on screen size when it first changes
+      // from mobile to desktop or vice versa, not on every resize
+      if (width >= 768 && isMobile) {
+        setSidebarVisible(true);
+      } else if (width < 768 && !isMobile) {
+        setSidebarVisible(false);
       }
     };
-
+  
     window.addEventListener('resize', handleResize);
-    handleResize();
     return () => window.removeEventListener('resize', handleResize);
-  }, []);
+  }, [isMobile]);
 
   const handleSidebarToggle = () => {
     setSidebarVisible(prev => !prev);
@@ -31,15 +35,17 @@ const Master = () => {
 
   return (
     <div className={`sb-nav-fixed ${!sidebarVisible ? 'sb-sidenav-toggled' : ''}`}>
-      <Navbar onSidebarToggle={handleSidebarToggle} isMobile={isMobile} />
+      <Navbar 
+        onSidebarToggle={handleSidebarToggle} 
+        sidebarVisible={sidebarVisible} 
+        isMobile={isMobile} 
+      />
       <div id="layoutSidenav">
-        <div 
-          id="layoutSidenav_nav" 
-          className={`${isMobile ? 'mobile-nav' : ''} ${!sidebarVisible && 'hidden-sidebar'}`}
-        >
+        {/* Conditionally render the sidebar based on visibility in mobile view */}
+        <div id="layoutSidenav_nav" className={isMobile && !sidebarVisible ? 'd-none d-md-block' : ''}>
           <Sidebar />
         </div>
-        <div className="layoutSidenav_content">
+        <div id="layoutSidenav_content" className={sidebarVisible && isMobile ? 'content-pushed' : ''}>
           <main className="page-content">
             <Routes>
               {routes.map((route, index) => (
@@ -60,56 +66,3 @@ const Master = () => {
 };
 
 export default Master;
-// const Master = () => {
-//   const [sidebarVisible, setSidebarVisible] = useState(!isMobile); // Default to false for smaller screens
-//   const [isMobile, setIsMobile] = useState(window.innerWidth <= 992);
-
-//   useEffect(() => {
-//     const handleResize = () => {
-//       const mobile = window.innerWidth <= 992;
-//       setIsMobile(mobile);
-//       if (mobile) {
-//         setSidebarVisible(false); // Ensure sidebar is hidden by default on mobile
-//       }
-//     };
-
-//     window.addEventListener('resize', handleResize);
-//     handleResize();
-//     return () => window.removeEventListener('resize', handleResize);
-//   }, []);
-
-//   const handleSidebarToggle = () => {
-//     setSidebarVisible(prev => !prev);
-//   };
-
-//   return (
-//     <div className={`sb-nav-fixed ${!sidebarVisible ? 'sb-sidenav-toggled' : ''}`}>
-//       <Navbar onSidebarToggle={handleSidebarToggle} isMobile={isMobile} />
-//       <div id="layoutSidenav">
-//         <div 
-//           id="layoutSidenav_nav" 
-//           className={`${isMobile ? 'mobile-nav' : ''} ${!sidebarVisible && 'hidden-sidebar'}`}
-//         >
-//           <Sidebar />
-//         </div>
-//         <div className="layoutSidenav_content">
-//           <main>
-//             <Routes>
-//               {routes.map((route, index) => (
-//                 <Route
-//                   key={index}
-//                   path={route.path}
-//                   element={<route.component sidebarVisible={sidebarVisible} setSidebarVisible={setSidebarVisible} />}
-//                 />
-//               ))}
-//               <Route path="*" element={<Navigate to="/admin/home" />} />
-//             </Routes>
-//           </main>
-//           <Footer />
-//         </div>
-//       </div>
-//     </div>
-//   );
-// };
-
-// export default Master;
