@@ -38,6 +38,7 @@
     
     /* Ensure page container takes full width */
     .page-container {
+
       width: 100%;
       padding: 1rem;
       transition: all 0.3s ease-in-out;
@@ -71,5 +72,10 @@
       margin-left: 0;
       width: 100%;
     }
+    .page-container{
+        margin-left: -7%;
+       
+    }
+
   }
   

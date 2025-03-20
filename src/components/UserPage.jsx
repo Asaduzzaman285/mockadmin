@@ -256,6 +256,7 @@ const UserPage = ({ sidebarVisible: propSidebarVisible }) => {
   const [loading, setLoading] = useState(true);
   const [authError, setAuthError] = useState(false);
   const [tableLoading, setTableLoading] = useState(false);
+  const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
   
   // New state for tracking sidebar visibility based on screen size
   const [sidebarVisible, setSidebarVisible] = useState(propSidebarVisible);
@@ -263,7 +264,8 @@ const UserPage = ({ sidebarVisible: propSidebarVisible }) => {
   // Track screen size changes
   useEffect(() => {
     const handleResize = () => {
-      setSidebarVisible(window.innerWidth > 992 ? propSidebarVisible : false);
+      setIsMobile(window.innerWidth < 768);
+      setSidebarVisible(window.innerWidth >= 768 ? propSidebarVisible : false);
     };
     
     window.addEventListener('resize', handleResize);
@@ -458,6 +460,50 @@ const UserPage = ({ sidebarVisible: propSidebarVisible }) => {
     
     return filteredUsers.map((user, index) => {
       const roleNames = user.roles?.map(role => role.name).join(', ') || 'No Role';
+      
+      if (isMobile) {
+        // Mobile view - stacked layout
+        return (
+          <tr key={user.id} className="align-middle">
+            <td colSpan="6" className="p-0">
+              <div className="card m-2 shadow-sm">
+                <div className="card-body p-3">
+                  <div className="d-flex justify-content-between align-items-center mb-2">
+                    <div className="d-flex align-items-center">
+                      <div className="bg-light rounded-circle p-2 me-2 text-center" style={{ width: '40px', height: '40px' }}>
+                        <i className="fa-solid fa-user"></i>
+                      </div>
+                      <div>
+                        <div className="fw-bold">{user.name}</div>
+                        <div className="small text-muted">{user.email}</div>
+                      </div>
+                    </div>
+                    <Button 
+                      variant="outline-primary" 
+                      size="sm"
+                      className="rounded-circle" 
+                      style={{ width: '32px', height: '32px' }}
+                      onClick={() => handleEdit(user)}
+                    >
+                      <i className="fa-solid fa-pen-to-square"></i>
+                    </Button>
+                  </div>
+                  <div className="d-flex flex-wrap gap-2 mt-2">
+                    <span className="badge bg-info text-dark px-2 py-1">{roleNames}</span>
+                    {user.status === 1 ? (
+                      <span className="bg-success badge text-white px-2 py-1">Active</span>
+                    ) : (
+                      <span className="bg-warning badge text-dark px-2 py-1">Inactive</span>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </td>
+          </tr>
+        );
+      }
+      
+      // Desktop view - standard table layout
       return (
         <tr key={user.id} className="align-middle">
           <td className="ps-4">{isFiltered ? user.id : ((paginator.current_page - 1) * paginator.record_per_page) + index + 1}</td>
@@ -607,15 +653,6 @@ const UserPage = ({ sidebarVisible: propSidebarVisible }) => {
     }
   };
   
-  // Updated container style to match Tests page
-  const containerStyle = {
-    padding: sidebarVisible ? '80px 0% 0px 18%' : '70px 0% 0px 0%',
-    backgroundColor: '#f8f9fa',
-    minHeight: '100vh',
-    transition: 'all 0.3s ease',
-    width: '100%',
-  };
-  
   // Redirect to login if authentication error
   useEffect(() => {
     if (authError) {
@@ -627,33 +664,36 @@ const UserPage = ({ sidebarVisible: propSidebarVisible }) => {
   if (loading) {
     return (
       <div className="d-flex justify-content-center align-items-center vh-100">
-        <div className="spinner-border text-primary" style={{ width: '3rem', height: '3rem' }} role="status">
-          <span className="visually-hidden">Loading...</span>
-        </div>
+        <Spinner animation="border" variant="primary" style={{ width: '3rem', height: '3rem' }} />
       </div>
     );
   }
+
+  // Define container class based on mobile and sidebar status
+  const containerClass = isMobile 
+    ? "page-container mobile-view" 
+    : `page-container ${sidebarVisible ? "" : "expanded"}`;
   
   return (
-    <div style={containerStyle} >   
-      <div className="px-4">
+    <div className={containerClass}>
+      <div className="px-2 px-md-4">
         {/* Updated header section styling */}
         <div className="mb-3 pb-2 border-bottom">
           <div className="d-flex justify-content-between align-items-center">
-            <h2 className="fw-semibold text-primary mb-2 fs-4">
+            <h2 className="fw-semibold text-primary mb-2 fs-5 fs-md-4">
               <i className="fa-solid fa-users me-2"></i>
               User Management
             </h2>
-            <Breadcrumb className="fs-7">
+            <Breadcrumb className="fs-7 d-none d-md-flex">
               <Breadcrumb.Item linkAs={Link} linkProps={{ to: "/" }}>Dashboard</Breadcrumb.Item>
               <Breadcrumb.Item active>Users</Breadcrumb.Item>
             </Breadcrumb>
           </div>
   
-          {/* Updated filter section styling */}
-          <div className="d-flex flex-wrap gap-3">
-            <div className="d-flex align-items-center" style={{ width: '40%' }}>
-              <div style={{ flex: 1 }}>
+              {/* Updated filter section styling */}
+              <div className="d-flex flex-wrap gap-2 mt-3">
+            <div className="d-flex align-items-center" style={{ width: isMobile ? '100%' : '400px' }}>
+              <div className="flex-grow-1">
                 <Select
                   options={nameOptions}
                   value={selectedUser}
@@ -707,10 +747,8 @@ const UserPage = ({ sidebarVisible: propSidebarVisible }) => {
         <div className="bg-white rounded-3 shadow-sm overflow-hidden">
           {tableLoading ? (
             <div className="d-flex justify-content-center align-items-center py-5">
-              <div className="spinner-border text-primary me-2" role="status">
-                <span className="visually-hidden">Loading...</span>
-              </div>
-              <span className="ms-3 text-muted">Loading users...</span>
+              <Spinner animation="border" variant="primary" className="me-2" />
+              <span className="ms-2 text-muted">Loading users...</span>
             </div>
           ) : filteredUsers.length === 0 ? (
             <div className="alert alert-info m-3 rounded-3 shadow-sm">
@@ -718,27 +756,31 @@ const UserPage = ({ sidebarVisible: propSidebarVisible }) => {
               {selectedUser ? "No users match your filter. Please try another selection." : "No users found. Add your first user to get started."}
             </div>
           ) : (
-            <table className="table table-hover mb-0">
-              <thead className="table-light">
-                <tr>
-                  <th className="ps-4 text-secondary small">#</th>
-                  <th className="text-secondary small">USER INFORMATION</th>
-                  <th className="text-secondary small">ROLE</th>
-                  <th className="text-secondary small">STATUS</th>
-                  <th className="text-secondary small">EMAIL</th>
-                  <th className="text-center text-secondary small">ACTIONS</th>
-                </tr>
-              </thead>
-              <tbody>
-                {renderUserRows()}
-              </tbody>
-            </table>
+            <div className="table-responsive">
+              <table className={`table table-hover mb-0 ${isMobile ? 'table-mobile' : ''}`}>
+                {!isMobile && (
+                  <thead className="table-light">
+                    <tr>
+                      <th className="ps-4 text-secondary small">#</th>
+                      <th className="text-secondary small">USER INFORMATION</th>
+                      <th className="text-secondary small">ROLE</th>
+                      <th className="text-secondary small">STATUS</th>
+                      <th className="text-secondary small">EMAIL</th>
+                      <th className="text-center text-secondary small">ACTIONS</th>
+                    </tr>
+                  </thead>
+                )}
+                <tbody>
+                  {renderUserRows()}
+                </tbody>
+              </table>
+            </div>
           )}
         </div>
   
         {/* Updated pagination styling */}
         {!isFiltered && !tableLoading && filteredUsers.length > 0 && (
-          <div className="mt-4 d-flex justify-content-end">
+          <div className="mt-4 d-flex justify-content-center justify-content-md-end">
             <Paginate
               paginator={paginator}
               currentPage={currentPage}
@@ -759,6 +801,6 @@ const UserPage = ({ sidebarVisible: propSidebarVisible }) => {
       />
     </div>
   );
-  };
+};
   
-  export default UserPage;
+export default UserPage;

@@ -48,6 +48,7 @@ const Tests = ({ sidebarVisible: propSidebarVisible }) => {
   // New state for tracking sidebar visibility and screen size
   const [sidebarVisible, setSidebarVisible] = useState(propSidebarVisible);
   const [screenWidth, setScreenWidth] = useState(window.innerWidth);
+  const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
   const navigate = useNavigate();
   const API_BASE_URL = "https://mocktestadminapi.perppilot.com";
   const fileRef = useRef(null);
@@ -74,6 +75,7 @@ useEffect(() => {
   const handleResize = () => {
     const width = window.innerWidth;
     setScreenWidth(width);
+    setIsMobile(width < 768);
     
     // Update sidebar visibility based on screen width
     if (width <= 992) {
@@ -91,16 +93,13 @@ useEffect(() => {
   return () => window.removeEventListener('resize', handleResize);
 }, [propSidebarVisible]);
  
-const containerStyle = {
-  padding: sidebarVisible ? '80px 0% 0px 18%' : '70px 0% 0px 0%',
-  backgroundColor: '#f8f9fa',
-  minHeight: '100vh',
-  transition: 'all 0.3s ease',
-  width: '100%',
-};
-const selectContainerStyle = {
-  width: screenWidth <= 576 ? '100%' : screenWidth <= 992 ? '60%' : '40%',
-};
+const containerClass = isMobile 
+  ? "page-container mobile-view" 
+  : `page-container ${sidebarVisible ? "" : "expanded"}`;
+
+  const selectContainerStyle = {
+    width: screenWidth <= 576 ? '100%' : screenWidth <= 992 ? '60%' : '40%',
+  };
 
   const filterTests = async () => {
     if (selectedTest) {
@@ -681,57 +680,115 @@ const handleQuestionFileUpload = async () => {
       const isExpanded = expandedTestId === test.id;
       const testDesc = isExpanded ? test.desc : 
         `${test.desc.substring(0, 100)}${test.desc.length > 100 ? '...' : ''}`;
-
+  
+      if (isMobile) {
+        // Mobile card view
+        return (
+          <tr key={test.id} className="align-middle">
+            <td colSpan="6" className="p-0">
+              <div className="card m-2 shadow-sm">
+                <div className="card-body p-3">
+                  <div className="d-flex justify-content-between align-items-center mb-2">
+                    <div className="d-flex align-items-center">
+                      <div className="bg-light rounded-circle p-2 me-2 text-center" style={{ width: '40px', height: '40px' }}>
+                        <i className="fa-solid fa-file-circle-check"></i>
+                      </div>
+                      <div>
+                        <div className="fw-bold">{test.title}</div>
+                        <div className="small text-muted">
+                          <i className="fa-solid fa-bangladeshi-taka-sign me-1"></i>
+                          {test.price}
+                        </div>
+                      </div>
+                    </div>
+                    <Button 
+                      variant="outline-primary" 
+                      size="sm"
+                      className="rounded-circle" 
+                      style={{ width: '32px', height: '32px' }}
+                      onClick={() => handleUpdate(test)}
+                    >
+                      <i className="fa-solid fa-pen-to-square"></i>
+                    </Button>
+                  </div>
+                  <p className="small text-muted mb-2">{testDesc}</p>
+                  {test.desc.length > 100 && (
+                    <Button
+                      variant="link"
+                      className="text-decoration-none p-0 text-info small"
+                      onClick={() => setExpandedTestId(isExpanded ? null : test.id)}
+                    >
+                      {isExpanded ? 'Show less' : 'Show more'}
+                    </Button>
+                  )}
+                  {correctedFilePath && (
+                    <Button
+                      variant="outline-primary"
+                      size="sm"
+                      className="mt-2 d-flex align-items-center gap-1 border-0"
+                      onClick={() => handleFileClick(correctedFilePath)}
+                    >
+                      <i className="fa-regular fa-image"></i>
+                      <span className="small">View Image</span>
+                    </Button>
+                  )}
+                </div>
+              </div>
+            </td>
+          </tr>
+        );
+      }
+  
+      // Desktop table view
       return (
         <tr key={test.id} className="align-middle">
-        <td className="fw-light text-secondary ps-4 small" >
-          {new Date(test.created_at).toLocaleDateString()}
-        </td>
-        <td className="text-muted small">{test.title}</td>
-        <td style={{ maxWidth: '200px' }}>
-          <p className="mb-0 small text-muted">{testDesc}</p>
-          {test.desc.length > 100 && (
-            <Button
-              variant="link"
-              className="text-decoration-none p-0 text-info small"
-              onClick={() => setExpandedTestId(isExpanded ? null : test.id)}
-            >
-              {isExpanded ? 'Show less' : 'Show more'}
-            </Button>
-          )}
-        </td>
-        <td className="text-muted small fw-medium">
-        <i className="fa-solid small fa-bangladeshi-taka-sign "></i>
-          {test.price}
-          
-        </td>
-        <td>
-          {correctedFilePath && (
-            <Button
-              variant="outline-primary"
-              size="sm"
-              className="d-flex align-items-center gap-1 border-0"
-              onClick={() => handleFileClick(correctedFilePath)}
-            >
-              <i className="fa-regular fa-image"></i>
-              <span className="small">View</span>
-            </Button>
-          )}
-        </td>
-        <td className="text-center">
-          <div className="d-flex gap-2 justify-content-center">
-            <Button
-              variant="outline-primary"
-              size="sm"
-              onClick={() => handleUpdate(test)}
-              className="px-2 py-1 rounded-2 border-0"
-              title="Manage Test"
-            >
-              <i className="fa-solid fa-pen-to-square text-dark"></i>
-            </Button>
-          </div>
-        </td>
-      </tr>
+          <td className="fw-light text-secondary ps-4 small">
+            {new Date(test.created_at).toLocaleDateString()}
+          </td>
+          <td className="text-muted small">{test.title}</td>
+          <td style={{ maxWidth: '200px' }}>
+            <p className="mb-0 small text-muted">{testDesc}</p>
+            {test.desc.length > 100 && (
+              <Button
+                variant="link"
+                className="text-decoration-none p-0 text-info small"
+                onClick={() => setExpandedTestId(isExpanded ? null : test.id)}
+              >
+                {isExpanded ? 'Show less' : 'Show more'}
+              </Button>
+            )}
+          </td>
+          <td className="text-muted small fw-medium">
+            <i className="fa-solid small fa-bangladeshi-taka-sign"></i>
+            {test.price}
+          </td>
+          <td>
+            {correctedFilePath && (
+              <Button
+                variant="outline-primary"
+                size="sm"
+                className="d-flex align-items-center gap-1 border-0"
+                onClick={() => handleFileClick(correctedFilePath)}
+              >
+                <i className="fa-regular fa-image"></i>
+                <span className="small">View</span>
+              </Button>
+            )}
+          </td>
+          <td className="text-center">
+            <div className="d-flex gap-2 justify-content-center">
+              <Button
+                variant="outline-primary"
+                size="sm"
+                onClick={() => handleUpdate(test)}
+                className="px-2 py-1 rounded-2 border-0"
+                title="Manage Test"
+              >
+                <i className="fa-solid fa-pen-to-square text-dark"></i>
+              </Button>
+            </div>
+          </td>
+        </tr>
       );
     });
   };
@@ -823,16 +880,7 @@ const handleQuestionFileUpload = async () => {
               </Row>
 
               <Row className="g-3 mb-4">
-                {/* <Col md={6}>
-                  <Form.Label className="fw-medium small text-secondary">Number of Questions</Form.Label>
-                  <Form.Control
-                    type="number"
-                    required
-                    size="sm"
-                    value={modalData.no_of_ques}
-                    onChange={(e) => setModalData(prev => ({ ...prev, no_of_ques: e.target.value }))}
-                  />
-                </Col> */}
+            
                 <Col md={6}>
                   <Form.Label className="fw-medium small text-secondary">Price ($)</Form.Label>
                   <Form.Control
@@ -981,19 +1029,19 @@ const handleQuestionFileUpload = async () => {
     );
   }
   return (
-    <div style={containerStyle}>
-      <div className="px-4">
-        <div className="mb-3 pb-2 border-bottom">
-          <div className="d-flex justify-content-between align-items-center">
-            <h2 className="fw-semibold text-primary mb-2 fs-4">
-              <i className="fa-solid fa-file-circle-check me-2"></i>
-              Mock Tests
-            </h2>
-            <Breadcrumb className="fs-7">
-              <Breadcrumb.Item linkAs={Link} linkProps={{ to: "/" }}>Dashboard</Breadcrumb.Item>
-              <Breadcrumb.Item active>Mock Tests</Breadcrumb.Item>
-            </Breadcrumb>
-          </div>
+    <div className={containerClass}>
+    <div className="px-4">
+      <div className="mb-3 pb-2 border-bottom">
+        <div className="d-flex justify-content-between align-items-center">
+          <h2 className="fw-semibold text-primary mb-2 fs-4">
+            <i className="fa-solid fa-file-circle-check me-2"></i>
+            Mock Tests
+          </h2>
+          <Breadcrumb className={`fs-7 ${isMobile ? 'd-none' : ''}`}>
+            <Breadcrumb.Item linkAs={Link} linkProps={{ to: "/" }}>Dashboard</Breadcrumb.Item>
+            <Breadcrumb.Item active>Mock Tests</Breadcrumb.Item>
+          </Breadcrumb>
+        </div>
 
           {/* Filters and Add Button */}
           <div className="d-flex flex-wrap gap-3">
@@ -1061,20 +1109,21 @@ const handleQuestionFileUpload = async () => {
                 {selectedTest ? "No tests match your filter. Please try another selection." : "No tests found. Create your first mock test to get started."}
               </Alert>
             ) : (
-              <Table hover responsive className="mb-0">
+              <Table hover responsive className={`mb-0 ${isMobile ? 'table-mobile' : ''}`}>
+              {!isMobile && (
                 <thead className="table-light">
                   <tr>
                     <th className="ps-4 text-secondary small">DATE</th>
                     <th className="text-secondary small">TITLE</th>
                     <th className="text-secondary small">DESCRIPTION</th>
-                
                     <th className="text-secondary small">PRICE</th>
                     <th className="text-secondary small">IMAGE</th>
                     <th className="text-center text-secondary small">ACTIONS</th>
                   </tr>
                 </thead>
-                <tbody className="border-top">{renderTests()}</tbody>
-              </Table>
+              )}
+              <tbody className="border-top">{renderTests()}</tbody>
+            </Table>
             )}
           </div>
     

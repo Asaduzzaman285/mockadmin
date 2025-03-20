@@ -8,19 +8,19 @@ import '../../assets/admin/css/styles.css';
 import '../../assets/admin/css/custom.css';
 
 const Master = () => {
-  const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
-  const [sidebarVisible, setSidebarVisible] = useState(window.innerWidth >= 768);
+  const [isMobile, setIsMobile] = useState(window.innerWidth < 500);
+  const [sidebarVisible, setSidebarVisible] = useState(window.innerWidth >= 500);
 
   useEffect(() => {
     const handleResize = () => {
       const width = window.innerWidth;
-      setIsMobile(width < 768);
+      setIsMobile(width < 500);
       
       // Only update sidebar visibility based on screen size when it first changes
       // from mobile to desktop or vice versa, not on every resize
-      if (width >= 768 && isMobile) {
+      if (width >= 500 && isMobile) {
         setSidebarVisible(true);
-      } else if (width < 768 && !isMobile) {
+      } else if (width < 500 && !isMobile) {
         setSidebarVisible(false);
       }
     };
