@@ -4,6 +4,7 @@ import UserPage from '../components/UserPage';
 
 import Tests from '../components/Tests';
 import MockTest from '../components/MockTest';
+import WalletPage from '../components/WalletPage';
 
 const routes = [
   { path: '/admin/home', exact: true, name: 'Homepage', component: (props) => <Homepage {...props} /> },
@@ -16,6 +17,7 @@ const routes = [
   // { path: 'admin/ads', exact: true, name: 'Ads', component: (props) => <Ads {...props} /> },
   // { path: 'admin/orders', exact: true, name: 'Orders', component: (props) => <Orders {...props} /> },
   { path: 'admin/tests', exact: true, name: 'Tests', component: (props) => <Tests {...props} /> },
+  { path: 'admin/wallet', exact: true, name: 'WalletPage', component: (props) => <WalletPage {...props} /> },
 
   
   

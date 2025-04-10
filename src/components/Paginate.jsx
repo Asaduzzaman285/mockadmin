@@ -23,11 +23,14 @@ function Paginate(props) {
 
     return (
         <Fragment>
-             <div className="d-flex justify-content-between align-items-center mb-3">
+         
+         <div className="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-2 mb-3">
     
-
+         <div className="text-muted small">
+                Showing {paginator?.current_page==1 ? 1 : (paginator?.current_page-1)*paginator?.record_per_page+1} to {paginator?.current_page==1 ? paginator?.current_page_items_count : (paginator?.current_page-1)*paginator?.record_per_page+paginator?.current_page_items_count} of {paginator?.total_count} entries
+            </div>
             <nav aria-label="Page navigation example float-right" >
-                <ul className="pagination float-right">
+                <ul className="pagination mb-0 justify-content-center justify-content-md-end">
 
                     <li className={`page-item ${previous_page_url ? '':'disabled' }`}>
                         <a href="#0" className="page-link" onClick={ (e) => onClickPage(e, 1)} aria-label="First page" title="First page">

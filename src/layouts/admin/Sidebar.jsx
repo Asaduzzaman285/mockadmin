@@ -35,7 +35,12 @@ const Sidebar = () => {
             </div>
             Mock Test
           </NavLink>
-      
+          <NavLink className="nav-link" to="/admin/wallet" activeClassName="active">
+            <div className="sb-nav-link-icon">
+              <i className="fas fa-tachometer-alt"></i>
+            </div>
+            Wallet
+          </NavLink>
         </div>
       </div>
     </nav>

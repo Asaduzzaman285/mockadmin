@@ -69,7 +69,7 @@
     }
     
     .sb-nav-fixed.sb-sidenav-toggled #layoutSidenav #layoutSidenav_content {
-      margin-left: 0;
+      margin-left: -8%;
       width: 100%;
     }
     .page-container{

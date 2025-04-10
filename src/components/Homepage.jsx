@@ -6,6 +6,7 @@ import 'bootstrap/dist/css/bootstrap.min.css';
 const cardData = [
   { title: 'Users', path: '/admin/user', color: '#0d6efd', icon: 'fa-solid fa-users' },
   { title: 'Tests', path: '/admin/tests', color: '#6c757d', icon: 'fa-solid fa-file-circle-check' },
+  { title: 'WalletPage', path: '/admin/wallet', color: '#6c757d', icon: 'fa-solid fa-file-circle-check' },
 ];
 
 const InfoCard = ({ title, path, color, icon }) => {
